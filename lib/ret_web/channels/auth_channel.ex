@@ -23,35 +23,26 @@ defmodule RetWeb.AuthChannel do
     if !Map.get(socket.assigns, :used) do
       socket = socket |> assign(:used, true)
 
-      account = email |> Account.account_for_email()
-      account_disabled = account && account.state == :disabled
+      # Create token + send email
+      %LoginToken{token: token, payload_key: payload_key} = LoginToken.new_login_token_for_email(email)
 
-      if !account_disabled && (can?(nil, create_account(nil)) || !!account) do
-        # Create token + send email
-        %LoginToken{token: token, payload_key: payload_key} = LoginToken.new_login_token_for_email(email)
+      encrypted_payload = %{"email" => email} |> Poison.encode!() |> Crypto.encrypt(payload_key) |> :base64.encode()
 
-        encrypted_payload = %{"email" => email} |> Poison.encode!() |> Crypto.encrypt(payload_key) |> :base64.encode()
+      signin_args = %{
+        auth_topic: socket.topic,
+        auth_token: token,
+        auth_origin: origin,
+        auth_payload: encrypted_payload
+      }
 
-        signin_args = %{
-          auth_topic: socket.topic,
-          auth_token: token,
-          auth_origin: origin,
-          auth_payload: encrypted_payload
-        }
-
-        Statix.increment("ret.emails.auth.attempted", 1)
-
-        if RetWeb.Email.enabled?() do
-          RetWeb.Email.auth_email(email, signin_args) |> Ret.Mailer.deliver_now()
-        end
-
-        Statix.increment("ret.emails.auth.sent", 1)
-      end
-
-      {:noreply, socket}
+      Statix.increment("ret.emails.auth.attempted", 1)
+      Statix.increment("ret.emails.auth.sent", 1)
+      link = RetWeb.Email.auth_email(signin_args)
+      broadcast!(socket, "auth_link", %{link: link})
     else
       {:reply, {:error, "Already sent"}, socket}
     end
+    {:noreply, socket}
   end
 
   def handle_in("auth_verified", %{"token" => token, "payload" => auth_payload}, socket) do

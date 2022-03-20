@@ -42,3 +42,6 @@ log
 
 #VS Code
 .vscode
+
+priv/cert
+config/qa.exs

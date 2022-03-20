@@ -20,6 +20,19 @@ use Distillery.Releases.Config,
 # when building in that environment, this combination of release
 # and environment configuration is called a profile
 
+environment :qa do
+  # If you are running Phoenix, you should make sure that
+  # server: true is set and the code reloader is disabled,
+  # even in dev mode.
+  # It is recommended that you build with MIX_ENV=prod and pass
+  # the --env flag to Distillery explicitly if you want to use
+  # dev mode.
+  set(dev_mode: true)
+  set(include_erts: false)
+  set(cookie: :"=!x&pbYZ[lT[2XdWU)=JWm9vC~,ym5U<6sUOAinLIIGF@!t1J/UY:es{Pok_0(Y@")
+  set(no_dot_erlang: true)
+end
+
 environment :dev do
   # If you are running Phoenix, you should make sure that
   # server: true is set and the code reloader is disabled,
